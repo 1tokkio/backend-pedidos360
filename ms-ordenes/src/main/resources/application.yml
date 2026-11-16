@@ -27,14 +27,8 @@ spring:
     password: ${RABBITMQ_PASSWORD}
 
   kafka:
+    # El productor se arma a mano en config/ProductorConfig.
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
-      properties:
-        enable.idempotence: true
-        max.block.ms: 10000
     consumer:
       group-id: ordenes
       auto-offset-reset: earliest
