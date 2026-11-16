@@ -30,6 +30,15 @@ spring:
         # Sin esto, un mensaje que falla vuelve a la cola y se reintenta para siempre.
         default-requeue-rejected: false
 
+  kafka:
+    # El productor se arma a mano en config/ProductorConfig.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: recomendaciones
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
 app:
   security:
     jwt:
