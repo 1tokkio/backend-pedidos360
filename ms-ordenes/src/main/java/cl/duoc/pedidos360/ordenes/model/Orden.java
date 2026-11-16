@@ -49,7 +49,8 @@ public class Orden {
     public Orden(String usuarioOid, String correoUsuario) {
         this.usuarioOid = usuarioOid;
         this.correoUsuario = correoUsuario;
-        this.estado = "CONFIRMADO";
+        // Nace pendiente: pasa a PAGADA o RECHAZADA cuando llega el resultado del pago por Kafka.
+        this.estado = "PENDIENTE_PAGO";
         this.fechaCreacion = LocalDateTime.now();
         this.total = 0;
     }
@@ -58,6 +59,10 @@ public class Orden {
         detalle.setOrden(this);
         this.detalles.add(detalle);
         this.total += detalle.getSubtotal();
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public Long getId() {
