@@ -1,0 +1,64 @@
+server:
+  port: ${SERVER_PORT:8087}
+
+spring:
+  application:
+    name: ms-pagos
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: pagos
+    open-in-view: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Con tres replicas, acks=all espera a que el mensaje este en las replicas sincronizadas.
+      acks: all
+      properties:
+        enable.idempotence: true
+        # Si Kafka no responde, falla en 10 segundos en vez de dejar colgada la peticion.
+        max.block.ms: 10000
+
+app:
+  fraude:
+    monto-maximo: ${FRAUDE_MONTO_MAXIMO:500000}
+    intentos-maximos: ${FRAUDE_INTENTOS_MAXIMOS:3}
+    ventana-minutos: ${FRAUDE_VENTANA_MINUTOS:5}
+  webpay:
+    url-base: ${WEBPAY_URL_BASE:https://webpay3gint.transbank.cl}
+    codigo-comercio: ${WEBPAY_CODIGO_COMERCIO}
+    llave: ${WEBPAY_LLAVE}
+    return-url: ${WEBPAY_RETURN_URL}
+  security:
+    jwt:
+      providers:
+        - name: azure
+          jwk-set-uri: ${AZURE_JWKS_URI}
+          issuers:
+            - ${AZURE_ISSUER_URI}
+          audiences:
+            - ${AZURE_CLIENT_ID}
+            - api://${AZURE_CLIENT_ID}
+        - name: cognito
+          jwk-set-uri: ${COGNITO_JWKS_URI}
+          issuers:
+            - ${COGNITO_ISSUER_URI}
+          audiences:
+            - ${COGNITO_CLIENT_ID}
+          default-role: Cliente
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
