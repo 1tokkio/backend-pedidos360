@@ -7,6 +7,9 @@ RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+# El servicio corre sin privilegios de root.
+RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=build /app/target/*.jar app.jar
+USER spring:spring
 EXPOSE 8083
 ENTRYPOINT ["java", "-Xmx256m", "-jar", "app.jar"]

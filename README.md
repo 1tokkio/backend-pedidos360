@@ -50,9 +50,11 @@ Se usan dos brokers, cada uno para lo que mejor resuelve:
   confirma, asi que no hace falta conservarla. Cada cola tiene su dead-letter queue (`<cola>.dlq`,
   via el exchange `pedidos360.dlx`): si el consumidor falla registra el error y el mensaje queda
   en la DLQ, visible en la consola de RabbitMQ.
-- **Kafka para hechos ("esto ocurrio")**. Dos topicos con 3 particiones y 3 replicas:
-  `pagos.resultado` (publica `ms-pagos`; lo leen `ms-ordenes` y `ms-auditoria` en grupos distintos) y
-  `auditoria.eventos` (publican `ms-ordenes` y `ms-pagos`; lo lee `ms-auditoria`). La auditoria
+- **Kafka para hechos ("esto ocurrio")**. Cuatro topicos con 3 particiones y 3 replicas:
+  `pagos.resultado` (publica `ms-pagos`; lo leen `ms-ordenes` y `ms-auditoria` en grupos distintos),
+  `auditoria.eventos` (publican `ms-ordenes` y `ms-pagos`; lo lee `ms-auditoria`),
+  `pagos.intentos` (publica y lee `ms-pagos` para detectar la rafaga de intentos) e
+  `interacciones.usuario` (publica y lee `ms-recomendaciones`). La auditoria
   paso de RabbitMQ a Kafka porque es un registro que se debe poder releer, no una tarea que se
   consume y desaparece.
 
@@ -113,15 +115,24 @@ Los mensajes viajan como JSON. Su estructura esta en los `record` de cada servic
 - `POST /api/v1/pagos` - pago directo sin WebPay, para probar desde Postman. Mismas reglas de fraude.
 - `GET /api/v1/pagos/mis-pagos` - pagos del usuario del token.
 - `GET /api/v1/pagos` - todos los pagos, **solo rol Admin**.
-- Publica `pagos.resultado` y `auditoria.eventos` en Kafka.
-- Fraude: monto mayor a `FRAUDE_MONTO_MAXIMO` (500000) o mas de `FRAUDE_INTENTOS_MAXIMOS` (3) pagos del
-  mismo usuario en `FRAUDE_VENTANA_MINUTOS` (5).
+- Publica `pagos.resultado`, `auditoria.eventos` y `pagos.intentos` en Kafka.
+- Fraude, dos reglas:
+  - Monto mayor a `FRAUDE_MONTO_MAXIMO` (500000): responde **403**.
+  - Rafaga: `FRAUDE_INTENTOS_MAXIMOS` (3) intentos del mismo usuario en menos de `FRAUDE_VENTANA_SEGUNDOS`
+    (10) lo bloquean `FRAUDE_BLOQUEO_MINUTOS` (30). Cada intento se publica en `pagos.intentos`; el
+    consumidor (grupo `fraude`) los cuenta en la tabla `estado_fraude`. Mientras el usuario esta
+    bloqueado, `iniciar` responde **429**.
 
 ### ms-recomendaciones
 - `GET /api/v1/recomendaciones/estado` - abierto, sin token.
 - `GET /api/v1/recomendaciones` - los productos mas vendidos.
 - `GET /api/v1/recomendaciones?productoId=1` - los que mas se compran en la misma orden que ese producto.
-- Consume `pedido.creado` (RabbitMQ, cola `recomendaciones.historial`) y actualiza los conteos.
+- `GET /api/v1/recomendaciones/mis-recomendaciones` - los cinco productos con mas puntaje para el usuario del token.
+- `POST /api/v1/recomendaciones/interacciones` - cuerpo `{ "productoId": 1, "nombreProducto": "...", "accion": "VISTA" }`.
+  La accion es `VISTA` (peso 1) o `CARRITO` (peso 2). Responde **202**: la interaccion se publica en
+  `interacciones.usuario` y la procesa el consumidor (grupo `recomendaciones`), que la guarda y recalcula el top 5.
+- Consume `pedido.creado` (RabbitMQ, cola `recomendaciones.historial`): actualiza los conteos de mas vendidos y de
+  compras juntas, y suma cada producto comprado con peso 3 al top 5 del usuario.
 
 ### ms-kafka-admin
 Todo **solo rol Admin**, salvo `/estado`. El nombre del topico va por query string.
@@ -131,7 +142,8 @@ Todo **solo rol Admin**, salvo `/estado`. El nombre del topico va por query stri
 - `PUT /api/v1/kafka/topicos?nombre=...` - cuerpo `{ "retencionMs": ..., "cleanupPolicy": "...", "particiones": ... }`.
 - `DELETE /api/v1/kafka/topicos?nombre=...` - borra el topico.
 - `GET /api/v1/kafka/grupos` - grupos de consumidores con su offset y lag por particion.
-- Al arrancar deja creados `pagos.resultado` y `auditoria.eventos` si no existen.
+- Al arrancar deja creados `pagos.resultado`, `auditoria.eventos`, `pagos.intentos` e `interacciones.usuario` si
+  no existen. Reintenta unas veces si el cluster todavia se esta levantando.
 
 ### lambda-socket y lambda-streams
 No son microservicios: se empaquetan con `mvn package` en `target/function.jar` y se suben a mano a Lambda
