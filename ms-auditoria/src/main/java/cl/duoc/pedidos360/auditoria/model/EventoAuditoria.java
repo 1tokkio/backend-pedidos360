@@ -18,8 +18,14 @@ public class EventoAuditoria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String routingKey;
+    // Antes de Kafka las filas traian la routing key de Rabbit. La columna se conserva
+    // para no tocar las filas existentes: ahora guarda el tipo del evento.
+    @Column(name = "routing_key", nullable = false, length = 100)
+    private String tipo;
+
+    // Filas viejas, de antes de Kafka, no tienen servicio.
+    @Column(length = 60)
+    private String servicio;
 
     @Lob
     @Column(nullable = false)
@@ -31,8 +37,9 @@ public class EventoAuditoria {
     public EventoAuditoria() {
     }
 
-    public EventoAuditoria(String routingKey, String contenido) {
-        this.routingKey = routingKey;
+    public EventoAuditoria(String servicio, String tipo, String contenido) {
+        this.servicio = servicio;
+        this.tipo = tipo;
         this.contenido = contenido;
         this.fechaRegistro = LocalDateTime.now();
     }
@@ -41,8 +48,12 @@ public class EventoAuditoria {
         return id;
     }
 
-    public String getRoutingKey() {
-        return routingKey;
+    public String getTipo() {
+        return tipo;
+    }
+
+    public String getServicio() {
+        return servicio;
     }
 
     public String getContenido() {

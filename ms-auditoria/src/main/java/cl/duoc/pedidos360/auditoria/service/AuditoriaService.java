@@ -15,8 +15,8 @@ public class AuditoriaService {
         this.repositorio = repositorio;
     }
 
-    public void registrar(String routingKey, String contenido) {
-        repositorio.save(new EventoAuditoria(routingKey, contenido));
+    public void registrar(String servicio, String tipo, String detalle) {
+        repositorio.save(new EventoAuditoria(servicio, tipo, detalle == null ? "" : detalle));
     }
 
     public List<EventoAuditoria> listar() {

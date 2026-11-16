@@ -20,14 +20,21 @@ spring:
         default_schema: auditoria
     open-in-view: false
 
-  rabbitmq:
-    host: ${RABBITMQ_HOST}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER}
-    password: ${RABBITMQ_PASSWORD}
-    listener:
-      simple:
-        default-requeue-rejected: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      # Cada @KafkaListener indica su propio grupo; este es solo el valor por defecto.
+      group-id: auditoria
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+# Las credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY y AWS_SESSION_TOKEN)
+# las toma el SDK directamente de las variables de entorno.
+aws:
+  region: ${AWS_REGION:us-east-1}
+  dynamodb:
+    tabla-pagos: ${DYNAMODB_TABLA_PAGOS:MetricasPagos}
 
 app:
   security:
