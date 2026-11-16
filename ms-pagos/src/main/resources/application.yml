@@ -21,22 +21,21 @@ spring:
     open-in-view: false
 
   kafka:
+    # El productor se arma a mano en config/ProductorConfig.
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      # Con tres replicas, acks=all espera a que el mensaje este en las replicas sincronizadas.
-      acks: all
-      properties:
-        enable.idempotence: true
-        # Si Kafka no responde, falla en 10 segundos en vez de dejar colgada la peticion.
-        max.block.ms: 10000
+    consumer:
+      group-id: fraude
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 app:
   fraude:
     monto-maximo: ${FRAUDE_MONTO_MAXIMO:500000}
+    # 3 intentos en menos de 10 segundos: ningun cliente real paga tan rapido, es un bot.
     intentos-maximos: ${FRAUDE_INTENTOS_MAXIMOS:3}
-    ventana-minutos: ${FRAUDE_VENTANA_MINUTOS:5}
+    ventana-segundos: ${FRAUDE_VENTANA_SEGUNDOS:10}
+    bloqueo-minutos: ${FRAUDE_BLOQUEO_MINUTOS:30}
   webpay:
     url-base: ${WEBPAY_URL_BASE:https://webpay3gint.transbank.cl}
     codigo-comercio: ${WEBPAY_CODIGO_COMERCIO}

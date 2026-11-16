@@ -40,6 +40,11 @@ public class PublicadorPagos {
         enviar(KafkaConfig.TOPICO_AUDITORIA, "ms-pagos", evento);
     }
 
+    /** Avisa que el usuario intento pagar. La clave es el usuario para que sus intentos lleguen en orden. */
+    public void publicarIntento(String usuarioOid, Long ordenId, int monto) {
+        enviar(KafkaConfig.TOPICO_INTENTOS, usuarioOid, new IntentoPago(usuarioOid, ordenId, monto, LocalDateTime.now()));
+    }
+
     private void enviar(String topico, String clave, Object mensaje) {
         try {
             String json = objectMapper.writeValueAsString(mensaje);

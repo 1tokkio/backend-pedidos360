@@ -57,6 +57,7 @@ public class PagoController {
         RespuestaInicio respuesta = servicio.iniciarWebpay(identificadorDe(token), peticion.ordenId(), peticion.monto());
         return switch (respuesta.estado()) {
             case "FRAUDE" -> error(HttpStatus.FORBIDDEN, respuesta.motivo());
+            case "BLOQUEADO" -> error(HttpStatus.TOO_MANY_REQUESTS, respuesta.motivo());
             case "RECHAZADO" -> error(HttpStatus.BAD_GATEWAY, respuesta.motivo());
             default -> ResponseEntity.ok(respuesta);
         };

@@ -34,7 +34,7 @@ public class PagoService {
     /** Pago sin WebPay: pasa por el mismo detector y publica el mismo evento. Sirve para probar desde Postman. */
     public Pago pagoDirecto(String usuarioOid, Long ordenId, int monto) {
         Pago pago = new Pago(ordenId, usuarioOid, monto, "DIRECTO");
-        String sospecha = detector.evaluar(usuarioOid, monto);
+        String sospecha = revisarFraude(usuarioOid, ordenId, monto);
         if (sospecha != null) {
             return cerrar(pago, "FRAUDE", sospecha);
         }
@@ -45,7 +45,14 @@ public class PagoService {
     public RespuestaInicio iniciarWebpay(String usuarioOid, Long ordenId, int monto) {
         Pago pago = new Pago(ordenId, usuarioOid, monto, "WEBPAY");
 
-        String sospecha = detector.evaluar(usuarioOid, monto);
+        String bloqueo = detector.bloqueo(usuarioOid);
+        if (bloqueo != null) {
+            pago = cerrar(pago, "FRAUDE", bloqueo);
+            return new RespuestaInicio(pago.getId(), "BLOQUEADO", bloqueo, null, null);
+        }
+
+        publicador.publicarIntento(usuarioOid, ordenId, monto);
+        String sospecha = detector.montoSospechoso(monto);
         if (sospecha != null) {
             pago = cerrar(pago, "FRAUDE", sospecha);
             return new RespuestaInicio(pago.getId(), "FRAUDE", sospecha, null, null);
@@ -104,6 +111,16 @@ public class PagoService {
 
     public List<Pago> todos() {
         return repositorio.findAllByOrderByFechaDesc();
+    }
+
+    /** Solo para el pago directo: bloqueo, intento y monto, en ese orden. Devuelve el motivo, o null si puede pagar. */
+    private String revisarFraude(String usuarioOid, Long ordenId, int monto) {
+        String bloqueo = detector.bloqueo(usuarioOid);
+        if (bloqueo != null) {
+            return bloqueo;
+        }
+        publicador.publicarIntento(usuarioOid, ordenId, monto);
+        return detector.montoSospechoso(monto);
     }
 
     /** Deja el pago en su estado final, lo guarda y avisa por Kafka. */
