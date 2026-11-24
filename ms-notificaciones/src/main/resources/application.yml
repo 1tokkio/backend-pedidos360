@@ -46,6 +46,8 @@ spring:
 
 correo:
   remitente: ${SMTP_USER:}
+  # Direccion de la tienda para el boton "Ver mis ordenes". Vacia, el correo sale sin el boton.
+  url-tienda: ${TIENDA_URL:}
 
 app:
   security:

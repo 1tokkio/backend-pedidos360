@@ -97,6 +97,8 @@ Los mensajes viajan como JSON. Su estructura esta en los `record` de cada servic
 - `POST /api/v1/notificaciones/enviar` - cuerpo `{ "destinatario": "..." }`, envia un correo de prueba sin pasar por RabbitMQ.
 - `GET /api/v1/notificaciones` - historial de notificaciones enviadas, **solo rol Admin**.
 - Consume `pedido.creado`, envia el correo de confirmacion y deja el intento registrado.
+  El correo es HTML con tabla de productos, total y boton "Ver mis ordenes", mas una version en texto
+  plano. El boton usa `TIENDA_URL`; si esa variable va vacia, el correo sale sin el boton.
 
 ### ms-auditoria
 - `GET /api/v1/auditoria/estado` - abierto, sin token.
